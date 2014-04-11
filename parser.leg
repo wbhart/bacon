@@ -1,0 +1,235 @@
+%{
+#include <stdio.h>
+#include "ast.h"
+#include "symbol.h"
+#include "exception.h"
+
+static int eat_eol = 0;
+
+#define YYSTYPE ast_t *
+
+/* 
+   Increase the parse buffers
+*/
+
+#define YY_BUFFER_STARAST_SIZE 16384 
+
+#define YY_STACK_SIZE YY_BUFFER_STARAST_SIZE
+
+#define YY_INPUT(buf, result, max_size, core)          \
+{                                                      \
+  int yyc = fgetc(stdin);                              \
+  if (yyc == EOF) { eat_eol = 0; longjmp(exc, 2); }    \
+  if (eat_eol) while (yyc == '\n') yyc = fgetc(stdin); \
+  if (yyc == '(') eat_eol++;                           \
+  if (yyc == ')') eat_eol--;                           \
+  result = (EOF == yyc) ? 0 : (*(buf)= yyc, 1);        \
+}
+%}
+
+start            = Spacing r:GlobalStmt { root = r; }
+                   | ( !EOL .)* EOL { root = NULL; eat_eol = 0; printf("Syntax error\n"); }
+GlobalStmt       = Spacing FnStmt
+                   | Spacing TypeStmt
+                   | GlobalIfElseStmt
+                   | LocalStmt
+LocalStmt        = Spacing IfStmt
+                   | Spacing WhileStmt
+                   | Spacing BreakStmt ';'
+                   | Spacing ReturnStmt ';'
+                   | Spacing Assignment ';'
+                   | Spacing Expr ';'
+                   | Spacing ';'
+Stmt             = Spacing IfElseStmt
+                   | LocalStmt
+
+Assignment       = i:Lvalue Equals e:Expr 
+                   { 
+                      $$ = ast2(AST_ASSIGNMENT, i, e);
+                      if (i->tag == AST_IDENT) i->tag == AST_LIDENT; 
+                      if (i->tag == AST_SLOT) i->tag == AST_LSLOT; 
+                      if (i->tag == AST_LOCN) i->tag == AST_LLOCN; 
+                      if (i->tag == AST_APPL) i->tag == AST_LAPPL; 
+                      if (i->tag == AST_TUPLE) i->tag == AST_LTUPLE; 
+                   } 
+
+Lvalue           = Reference
+                   | Tuple
+                   | Identifier
+
+Reference        = r:Identifier ( s:Appl { r = ast2(AST_APPL, r, s); } 
+                                | s:Slot { r = ast2(AST_SLOT, r, s); } 
+                                | s:Locn { r = ast2(AST_LOCN, r, s); } )+ { $$ = r; }
+
+Appl             = LParen s:ArgList RParen { $$ = s; }
+                   | LParen RParen { $$ = NULL; }
+ArgList          = r:Expr Comma s:ArgList { r->next = s; $$ = r; }
+                   | Expr
+
+Slot             = Dot < IdentStart IdentCont* > Spacing 
+                   {
+                      sym_t * sym = sym_lookup(yytext);
+                      $$ = ast_symbol(AST_SLOT, sym);
+                   }
+
+Locn             = LBrack e:Expr RBrack { $$ = e; }
+
+Block            = LBrace c:BlockBody RBrace { $$ = ast1(AST_BLOCK, c); }
+                   | LBrace RBrace { $$ = ast1(AST_BLOCK, NULL); }
+                   | Stmt
+BlockBody        = r:Stmt Spacing s:BlockBody { r->next = s; $$ = r; }
+                   | r:Stmt
+
+IfStmt           = If LParen e:Expr RParen b:Block EOL
+                   { $$ = ast2(AST_IF_STMT, e, ast1(AST_THEN, b)); }
+
+IfElseStmt       = If LParen e:Expr RParen b:Block Spacing Else c:Block
+                   { $$ = ast3(AST_IF_ELSE_STMT, e, ast1(AST_THEN, b), ast1(AST_ELSE, c)); }
+
+GlobalIfElseStmt = If LParen e:Expr RParen b:Block ( Space | Comment )* Else c:Block
+                   { $$ = ast3(AST_IF_ELSE_STMT, e, ast1(AST_THEN, b), ast1(AST_ELSE, c)); }
+
+IfElseExpr       = If LParen e:Expr RParen b:Expr Spacing Else c:Expr
+                   { $$ = ast3(AST_IF_ELSE_EXPR, e, ast1(AST_THEN, b), ast1(AST_ELSE, c)); }
+
+WhileStmt        = While LParen e:Expr RParen b:Block 
+                   { $$ = ast2(AST_WHILE_STMT, e, ast1(AST_DO, b)); }
+
+BreakStmt        = Break { $$ = ast0(AST_BREAK); }
+
+TypeStmt         = Type i:Identifier LBrace r:TypeBody RBrace
+                   { $$ = ast2(AST_TYPE_STMT, i, r); }
+TypeBody         = r:TypeSlot ';' Spacing s:TypeBody { r->next = s->child; $$ = ast1(AST_TYPE_BODY, r); }
+                   | r:TypeSlot ';' { $$ = ast1(AST_TYPE_BODY, r); }
+TypeSlot         = Spacing i:Identifier Colon r:TypeExpr { $$ = ast2(AST_TYPE_SLOT, i, r); }
+
+FnStmt           = Fn i:Identifier p:ParamList Colon t:TypeExpr b:FnBlock { $$ = ast4(AST_FN_STMT, i, p, t, b); }
+FnBlock          = LBrace b:BlockBody RBrace { $$ = ast1(AST_BLOCK, b); }
+                   | LBrace RBrace { $$ = ast1(AST_BLOCK, NULL); }
+ParamList        = LParen p:ParamBody RParen 
+                   | LParen RParen { $$ = ast1(AST_PARAM_BODY, NULL); }
+ParamBody        = r:Param Comma s:ParamBody { r->next = s->child; $$ = ast1(AST_PARAM_BODY, r); }
+                   | r:Param { $$ = ast1(AST_PARAM_BODY, r); }
+Param            = Spacing i:Identifier Colon r:TypeExpr { $$ = ast2(AST_PARAM, i, r); }
+
+ReturnStmt       = Return e:Expr { $$ = ast1(AST_RETURN, e); }
+                   | Return { $$ = ast1(AST_RETURN, ast_nil); }
+
+ArrayConstructor = Array LBrack t:TypeExpr RBrack LParen e:Expr RParen { $$ = ast2(AST_ARRAY_CONSTRUCTOR, t, e); }
+
+TypeExpr         = Typename
+                   | TupleType
+Typename         = !Reserved < IdentStart IdentCont* > Spacing
+                   {
+                      sym_t * sym = sym_lookup(yytext);
+                      $$ = ast_symbol(AST_TYPE_NAME, sym);
+                   }
+
+TupleType        = LParen r:TupleTypeBody RParen { $$ = ast1(AST_TUPLE_TYPE, r); }
+TupleTypeBody    = r:TypeExpr Comma s:TupleTypeBody { r->next = s; $$ = r; }
+                   | r:TypeExpr Comma { $$ = r; }
+                   | TypeExpr
+
+Expr             = r:Infix40 ( ( EQ s:Infix40 { r = ast_binop(sym_lookup("=="), r, s); } )
+                   | ( NE s:Infix40 { r = ast_binop(sym_lookup("!="), r, s); } ) )* { $$ = r; } 
+Infix40          = r:Infix20 ( ( LE s:Infix20 { r = ast_binop(sym_lookup("<="), r, s); } )
+                   | ( GE s:Infix20 { r = ast_binop(sym_lookup(">="), r, s); } ) 
+                   | ( LT s:Infix20 { r = ast_binop(sym_lookup("<"), r, s); } )
+                   | ( GT s:Infix20 { r = ast_binop(sym_lookup(">"), r, s); } ) )* { $$ = r; } 
+Infix20          = r:Infix10 ( ( Plus s:Infix10 { r = ast_binop(sym_lookup("+"), r, s); } )
+                   | ( Minus s:Infix10 { r = ast_binop(sym_lookup("-"), r, s); } ) )* { $$ = r; }
+Infix10          = r:Primary ( ( Times s:Primary { r = ast_binop(sym_lookup("*"), r, s); } )
+                   | ( Div s:Primary { r = ast_binop(sym_lookup("/"), r, s); } ) 
+                   | ( Mod s:Primary { r = ast_binop(sym_lookup("%"), r, s); } ) )* { $$ = r; }
+Primary          = ArrayConstructor | Reference | Double | Uword | Word | Int | String | Char | Identifier
+                   | ( LParen Expr RParen ) | Tuple | IfElseExpr
+                
+Tuple            = LParen r:TupleBody RParen { $$ = ast1(AST_TUPLE, r); }
+TupleBody        = r:Expr Comma s:TupleBody { r->next = s; $$ = r; }
+                   | r:Expr Comma { $$ = r; }
+                   | Expr
+
+Identifier       = !Reserved !TypeReserved < IdentStart IdentCont* > Spacing
+                   {
+                      sym_t * sym = sym_lookup(yytext);
+                      $$ = ast_symbol(AST_IDENT, sym);
+                   }
+IdentStart       = [a-zA-Z_]
+IdentCont        = IdentStart | [0-9]
+
+Reserved         = ( 'while' | 'if' | 'else' | 'type' | 'return' | 'fn' | 'array' | 'break' ) ![a-zA-Z0-9_]
+TypeReserved     = ( 'int' | 'word' | 'uword' | 'char' | 'string' | 'double' | 'nil' ) ![a-zA-Z0-9_]
+
+Double           = < ( [1-9] [0-9]* | '0' ) '.' [0-9]* 
+                   ( ( 'e' | 'E' ) ( '+' | '-' )? ( [1-9] [0-9]* | '0' ) )? > Spacing
+                   {
+                      sym_t * sym = sym_lookup(yytext);
+                      $$ = ast_symbol(AST_DOUBLE, sym);
+                   } 
+Int              = < ( [1-9] [0-9]* | '0' ) > Spacing
+                   {
+                      sym_t * sym = sym_lookup(yytext);
+                      $$ = ast_symbol(AST_INT, sym);
+                   }
+Word             = < ( [1-9] [0-9]* | '0' ) > 'i' Spacing
+                   {
+                      sym_t * sym = sym_lookup(yytext);
+                      $$ = ast_symbol(AST_WORD, sym);
+                   }
+Uword            = < ( [1-9] [0-9]* | '0' ) > 'u' Spacing
+                   {
+                      sym_t * sym = sym_lookup(yytext);
+                      $$ = ast_symbol(AST_UWORD, sym);
+                   }
+Char             = ( ['] < ![\\'"] . > ['] ) Spacing
+                   {
+                      sym_t * sym = sym_lookup(yytext);
+                      $$ = ast_symbol(AST_CHAR, sym);
+                   }
+                   | ( ['] < [\\] [\\'"nrt0] > ['] )
+                   {
+                      sym_t * sym = sym_lookup(yytext);
+                      $$ = ast_symbol(AST_CHAR, sym);
+                   }
+String           = '"' < ( '\\\"' | ( !'"' . ) )* > '"' Spacing
+                   {
+                      sym_t * sym = sym_lookup(yytext);
+                      $$ = ast_symbol(AST_STRING, sym);
+                   }
+
+Spacing          = ( Space | EOL | Comment )*
+Space            = ' ' | '\t'
+Comment          = '/*' ( !'*/' . )* '*/'
+
+While            = 'while' Spacing
+Break            = 'break' Spacing
+If               = 'if' Spacing
+Else             = 'else' Spacing
+Type             = 'type' Spacing
+Fn               = 'fn' Spacing
+Return           = 'return' Spacing
+Array            = 'array' Spacing
+
+Comma            = ',' Spacing
+Colon            = ':' Spacing
+Dot              = '.' Spacing
+Equals           = '=' Spacing
+LParen           = '(' Spacing
+RParen           = ')' Spacing 
+LBrace           = '{' Spacing
+RBrace           = Spacing '}' 
+LBrack           = '[' Spacing
+RBrack           = ']' Spacing 
+Plus             = '+' Spacing
+Minus            = '-' Spacing
+Times            = '*' Spacing
+Div              = '/' Spacing
+Mod              = '%' Spacing
+EQ               = '==' Spacing
+NE               = '!=' Spacing
+LE               = '<=' Spacing
+GE               = '>=' Spacing
+LT               = '<' Spacing
+GT               = '>' Spacing
+
+EOL              = '\r\n' | '\n' | '\r'
