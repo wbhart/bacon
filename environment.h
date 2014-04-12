@@ -24,78 +24,55 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#include <stdio.h>
 #include "gc.h"
-#include "ast.h"
+
 #include "symbol.h"
-#include "exception.h"
 #include "types.h"
-#include "environment.h"
-#include "inference.h"
-/*#include "backend.h"*/
 
-#include "parser.c"
+#ifndef ENVIRONMENT_H
+#define ENVIRONMENT_H
 
-#define DEBUG1 0 /* print ast */
-#define DEBUG2 0 /* print ast after inference */
+#include <llvm-c/Core.h>  
 
-extern jmp_buf exc;
+#ifdef __cplusplus
+ extern "C" {
+#endif
 
-int main(void)
+typedef struct bind_t
 {
-   ast_t * a;
-   int jval;
-   /*jit_t * jit;*/
-   
-   GC_INIT();
-   GREG g;
- 
-   ast_init();
-   sym_tab_init();
-   types_init();
-   scope_init();
-   intrinsics_init();
-   /*jit = llvm_init();*/
+   type_t * type;
+   sym_t * sym;
+   char * llvm;
+   LLVMValueRef llvm_val;
+   struct bind_t * next;
+} bind_t;
 
-   yyinit(&g);
+typedef struct env_t
+{
+   bind_t * scope;
+   struct env_t * next;
+} env_t;
 
-   printf("Welcome to Bacon v0.1\n\n");
-   printf("> ");
+extern env_t * current_scope;
 
-   while (1)
-   {
-      if (!(jval = setjmp(exc)))
-      {
-         if (!yyparse(&g))
-         {
-            printf("Error parsing\n");
-            abort();
-         } else if (root)
-         {
-#if DEBUG1
-            printf("\n");
-            ast_print(root, 0);
-#endif
-            inference(root);
-#if DEBUG2
-            printf("\n");
-            /*ast2_print(root, 0);*/
-#endif
-            /*exec_root(jit, root);*/
-            root = NULL;
-         }
-      } else if (jval == 1)
-         root = NULL;
-      else /* jval == 2 */
-         break;
-      
-      printf("\n> ");
-   }
+void scope_init(void);
 
-   /*llvm_cleanup(jit);*/
-   yydeinit(&g);
-    
-   printf("\n");
+void intrinsics_init(void);
 
-   return 0;
+bind_t * bind_generic(sym_t * sym, type_t * type);
+
+bind_t * bind_symbol(sym_t * sym, type_t * type, char * llvm);
+
+bind_t * find_symbol(sym_t * sym);
+
+env_t * scope_up(void);
+
+void scope_down(void);
+
+int scope_is_global(bind_t * bind);
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif

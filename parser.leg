@@ -30,7 +30,7 @@ static int eat_eol = 0;
 start            = Spacing r:GlobalStmt { root = r; }
                    | ( !EOL .)* EOL { root = NULL; eat_eol = 0; printf("Syntax error\n"); }
 GlobalStmt       = Spacing FnStmt
-                   | Spacing TypeStmt
+                   | Spacing DataStmt
                    | GlobalIfElseStmt
                    | LocalStmt
 LocalStmt        = Spacing IfStmt
@@ -46,11 +46,11 @@ Stmt             = Spacing IfElseStmt
 Assignment       = i:Lvalue Equals e:Expr 
                    { 
                       $$ = ast2(AST_ASSIGNMENT, i, e);
-                      if (i->tag == AST_IDENT) i->tag == AST_LIDENT; 
-                      if (i->tag == AST_SLOT) i->tag == AST_LSLOT; 
-                      if (i->tag == AST_LOCN) i->tag == AST_LLOCN; 
-                      if (i->tag == AST_APPL) i->tag == AST_LAPPL; 
-                      if (i->tag == AST_TUPLE) i->tag == AST_LTUPLE; 
+                      if (i->tag == AST_IDENT) i->tag = AST_LIDENT; 
+                      if (i->tag == AST_SLOT) i->tag = AST_LSLOT; 
+                      if (i->tag == AST_LOCN) i->tag = AST_LLOCN; 
+                      if (i->tag == AST_APPL) i->tag = AST_LAPPL; 
+                      if (i->tag == AST_TUPLE) i->tag = AST_LTUPLE; 
                    } 
 
 Lvalue           = Reference
@@ -80,7 +80,7 @@ Block            = LBrace c:BlockBody RBrace { $$ = ast1(AST_BLOCK, c); }
 BlockBody        = r:Stmt Spacing s:BlockBody { r->next = s; $$ = r; }
                    | r:Stmt
 
-IfStmt           = If LParen e:Expr RParen b:Block EOL
+IfStmt           = If LParen e:Expr RParen b:Block ( Space | Comment )* EOL
                    { $$ = ast2(AST_IF_STMT, e, ast1(AST_THEN, b)); }
 
 IfElseStmt       = If LParen e:Expr RParen b:Block Spacing Else c:Block
@@ -97,11 +97,11 @@ WhileStmt        = While LParen e:Expr RParen b:Block
 
 BreakStmt        = Break { $$ = ast0(AST_BREAK); }
 
-TypeStmt         = Type i:Identifier LBrace r:TypeBody RBrace
-                   { $$ = ast2(AST_TYPE_STMT, i, r); }
-TypeBody         = r:TypeSlot ';' Spacing s:TypeBody { r->next = s->child; $$ = ast1(AST_TYPE_BODY, r); }
-                   | r:TypeSlot ';' { $$ = ast1(AST_TYPE_BODY, r); }
-TypeSlot         = Spacing i:Identifier Colon r:TypeExpr { $$ = ast2(AST_TYPE_SLOT, i, r); }
+DataStmt         = Data i:Identifier LBrace r:DataBody RBrace
+                   { $$ = ast2(AST_DATA_STMT, i, r); }
+DataBody         = r:DataSlot ';' Spacing s:DataBody { r->next = s->child; $$ = ast1(AST_DATA_BODY, r); }
+                   | r:DataSlot ';' { $$ = ast1(AST_DATA_BODY, r); }
+DataSlot         = Spacing i:Identifier Colon r:TypeExpr { $$ = ast2(AST_DATA_SLOT, i, r); }
 
 FnStmt           = Fn i:Identifier p:ParamList Colon t:TypeExpr b:FnBlock { $$ = ast4(AST_FN_STMT, i, p, t, b); }
 FnBlock          = LBrace b:BlockBody RBrace { $$ = ast1(AST_BLOCK, b); }
@@ -205,7 +205,7 @@ While            = 'while' Spacing
 Break            = 'break' Spacing
 If               = 'if' Spacing
 Else             = 'else' Spacing
-Type             = 'type' Spacing
+Data             = 'data' Spacing
 Fn               = 'fn' Spacing
 Return           = 'return' Spacing
 Array            = 'array' Spacing

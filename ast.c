@@ -196,7 +196,7 @@ void ast_print(ast_t * ast, int indent)
             a = a->next;
          }
          break;
-      case AST_TYPE_SLOT:
+      case AST_DATA_SLOT:
          printf("%s\n", ast->child->sym->name);
          break;
       case AST_TYPE_NAME:
@@ -205,8 +205,8 @@ void ast_print(ast_t * ast, int indent)
       case AST_TUPLE_TYPE:
          printf("tuple_type\n");
          break;
-      case AST_TYPE_STMT:
-         printf("type %s\n", ast->child->sym->name);
+      case AST_DATA_STMT:
+         printf("data %s\n", ast->child->sym->name);
          a = ast->child->next->child;
          while (a != NULL)
          {

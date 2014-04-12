@@ -24,78 +24,26 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#include <stdio.h>
 #include "gc.h"
+
 #include "ast.h"
-#include "symbol.h"
-#include "exception.h"
 #include "types.h"
 #include "environment.h"
-#include "inference.h"
-/*#include "backend.h"*/
 
-#include "parser.c"
+#ifndef INFERENCE_H
+#define INFERENCE_H
 
-#define DEBUG1 0 /* print ast */
-#define DEBUG2 0 /* print ast after inference */
-
-extern jmp_buf exc;
-
-int main(void)
-{
-   ast_t * a;
-   int jval;
-   /*jit_t * jit;*/
-   
-   GC_INIT();
-   GREG g;
- 
-   ast_init();
-   sym_tab_init();
-   types_init();
-   scope_init();
-   intrinsics_init();
-   /*jit = llvm_init();*/
-
-   yyinit(&g);
-
-   printf("Welcome to Bacon v0.1\n\n");
-   printf("> ");
-
-   while (1)
-   {
-      if (!(jval = setjmp(exc)))
-      {
-         if (!yyparse(&g))
-         {
-            printf("Error parsing\n");
-            abort();
-         } else if (root)
-         {
-#if DEBUG1
-            printf("\n");
-            ast_print(root, 0);
+#ifdef __cplusplus
+ extern "C" {
 #endif
-            inference(root);
-#if DEBUG2
-            printf("\n");
-            /*ast2_print(root, 0);*/
-#endif
-            /*exec_root(jit, root);*/
-            root = NULL;
-         }
-      } else if (jval == 1)
-         root = NULL;
-      else /* jval == 2 */
-         break;
-      
-      printf("\n> ");
-   }
 
-   /*llvm_cleanup(jit);*/
-   yydeinit(&g);
-    
-   printf("\n");
+type_t * find_prototype(type_t * gen, ast_t * a);
 
-   return 0;
+void inference(ast_t * a);
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif
+

@@ -33,8 +33,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <llvm-c/Transforms/Scalar.h> 
 
 #include "symbol.h"
-/*#include "environment.h"
-#include "types.h"*/
+#include "types.h"
+#include "environment.h"
 
 #ifndef AST_H
 #define AST_H
@@ -52,13 +52,14 @@ typedef enum
    AST_BLOCK, AST_IF_ELSE_EXPR, 
    AST_IF_ELSE_STMT, AST_IF_STMT, AST_THEN, AST_ELSE, 
    AST_ASSIGNMENT, AST_WHILE_STMT, AST_DO, AST_BREAK,
-   AST_TYPE_STMT, AST_TYPE_BODY, AST_TYPE_SLOT,
+   AST_DATA_STMT, AST_DATA_BODY, AST_DATA_SLOT,
    AST_TUPLE_TYPE, AST_TYPE_NAME,
    AST_FN_STMT, AST_PARAM_BODY, AST_PARAM, 
    AST_RETURN, 
    AST_ARRAY_CONSTRUCTOR, 
    AST_IDENT, AST_TUPLE, AST_SLOT, AST_LOCN, AST_APPL,
-   AST_LIDENT, AST_LTUPLE, AST_LSLOT, AST_LLOCN, AST_LAPPL
+   AST_LIDENT, AST_LTUPLE, AST_LSLOT, AST_LLOCN, AST_LAPPL,
+   AST_FN_BODY
 } tag_t;
 
 typedef struct ast_t
@@ -67,8 +68,8 @@ typedef struct ast_t
    struct ast_t * child;
    struct ast_t * next;
    sym_t * sym;
-/*   type_t * type;
-   env_t * env;*/
+   type_t * type;
+   env_t * env;
 } ast_t;
 
 extern ast_t * root;
