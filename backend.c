@@ -1079,7 +1079,7 @@ ret_t * exec_fnparams(jit_t * jit, ast_t * ast)
       palloca = LLVMBuildAlloca(jit->builder, type_to_llvm(jit, p->type), p->child->sym->name);
       LLVMBuildStore(jit->builder, param, palloca);
        
-      bind->llvm = p->child->sym->name;
+      bind->llvm = serialise(p->child->sym->name);
       loc_insert(bind->llvm, palloca);
          
       i++;
