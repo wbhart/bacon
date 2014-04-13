@@ -935,7 +935,7 @@ ret_t * exec_tuple_unpack(jit_t * jit, ast_t * ast1, ast_t * ast2)
 /*
    Jit a slot assignment statement
 */
-ret_t * exec_slot_assign(jit_t * jit, ast_t * slot, ast_t * expr)
+ret_t * exec_reference_assign(jit_t * jit, ast_t * slot, ast_t * expr)
 {
     ret_t * slot_ret, * expr_ret;
     LLVMValueRef val;
@@ -965,8 +965,8 @@ ret_t * exec_assignment(jit_t * jit, ast_t * id, ast_t * expr)
           return exec_tuple_unpack(jit, id, expr);
     } 
 
-    if (id->tag == AST_LSLOT)
-       return exec_slot_assign(jit, id, expr);
+    if (id->tag == AST_LSLOT || id->tag == AST_LLOCN || id->tag == AST_LAPPL)
+       return exec_reference_assign(jit, id, expr);
 
     bind_t * bind = find_symbol(id->sym);
     if (bind->llvm == NULL) /* symbol doesn't exist yet */
