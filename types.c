@@ -37,6 +37,8 @@ type_t * t_char;
 
 type_node_t * tuple_type_list;
 
+type_node_t * array_type_list;
+
 type_t * new_type(char * name, typ_t tag)
 {
    type_t * t = (type_t *) GC_MALLOC(sizeof(type_t));
@@ -57,6 +59,7 @@ void types_init(void)
    t_char = new_type("char", CHAR);
 
    tuple_type_list = NULL;
+   array_type_list = NULL;
 }
 
 type_t * fn_type(type_t * ret, int arity, type_t ** args)
@@ -175,6 +178,22 @@ type_t * array_type(type_t * el_type)
    t->tag = ARRAY;
    t->params[0] = el_type;
    
+   type_node_t * s = array_type_list;
+
+   /* ensure we return a unique array type for given arg types */
+   while (s != NULL)
+   {
+      if (s->type->params[0] == el_type)
+         return s->type;
+      
+      s = s->next;
+   }
+
+   s = GC_MALLOC(sizeof(type_node_t));
+   s->type = t;
+   s->next = array_type_list;
+   array_type_list = s;
+
    return t;
 }
 

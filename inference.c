@@ -444,6 +444,12 @@ void inference(ast_t * a)
       t1 = array_type(a1->type); /* type of array is parameterised by type of elements */
       a->type = t1;
       break;
+   case AST_ARRAY_TYPE:
+      a1 = a->child; /* type of array elements */
+      inference(a1);
+      t1 = array_type(a1->type); /* type of array is parameterised by type of elements */
+      a->type = t1;
+      break;
    case AST_IDENT:
       bind = find_symbol(a->sym); /* look up identifier */
       if (!bind)

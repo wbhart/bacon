@@ -233,6 +233,9 @@ void ast_print(ast_t * ast, int indent)
          printf("array_constructor");
          ast_print(ast->child, indent + 3);
          ast_print(ast->child->next, indent + 3);
+      case AST_ARRAY_TYPE:
+         printf("array");
+         ast_print(ast->child, indent + 3);
          break;
       case AST_SLOT:
       case AST_LSLOT:

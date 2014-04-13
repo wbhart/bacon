@@ -117,8 +117,9 @@ ReturnStmt       = Return e:Expr { $$ = ast1(AST_RETURN, e); }
 
 ArrayConstructor = Array LBrack t:TypeExpr RBrack LParen e:Expr RParen { $$ = ast2(AST_ARRAY_CONSTRUCTOR, t, e); }
 
-TypeExpr         = Typename
+TypeExpr         = ArrayType
                    | TupleType
+                   | Typename
 Typename         = !Reserved < IdentStart IdentCont* > Spacing
                    {
                       sym_t * sym = sym_lookup(yytext);
@@ -129,6 +130,8 @@ TupleType        = LParen r:TupleTypeBody RParen { $$ = ast1(AST_TUPLE_TYPE, r);
 TupleTypeBody    = r:TypeExpr Comma s:TupleTypeBody { r->next = s; $$ = r; }
                    | r:TypeExpr Comma { $$ = r; }
                    | TypeExpr
+
+ArrayType        = Array LBrack t:TypeExpr RBrack { $$ = ast1(AST_ARRAY_TYPE, t); }
 
 Expr             = r:Infix40 ( ( EQ s:Infix40 { r = ast_binop(sym_lookup("=="), r, s); } )
                    | ( NE s:Infix40 { r = ast_binop(sym_lookup("!="), r, s); } ) )* { $$ = r; } 
