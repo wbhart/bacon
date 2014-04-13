@@ -1,6 +1,6 @@
 /*
 
-Copyright 2014 William Hart. All rights reserved.
+Copyright 2012, 2014 William Hart. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are
 permitted provided that the following conditions are met:
@@ -25,6 +25,20 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "inference.h"
+
+/*
+   Change AST tag to L-value version of tag
+*/
+void to_lvalue(ast_t * a)
+{
+   if (a->tag == AST_IDENT) a->tag = AST_LIDENT;
+   else if (a->tag == AST_SLOT) a->tag = AST_LSLOT;
+   else if (a->tag == AST_LOCN) a->tag = AST_LLOCN;
+   else if (a->tag == AST_TUPLE) a->tag = AST_LTUPLE;
+   else if (a->tag == AST_APPL) a->tag = AST_LAPPL; 
+   else
+      exception("Invalid L-value in assignment\n");
+}
 
 /*
    Annotate AST node for the Lvalue side of an assignment
@@ -54,6 +68,7 @@ void assign_inference(ast_t * a, type_t * b)
           exception("Incorrect number of entries in tuple assignment\n");
        for (j = 0; j < i; j++) /* infer types of each entry in the tuple on the LHS */
        {
+          to_lvalue(a1);
           assign_inference(a1, b->args[j]);
           a1 = a1->next;
        }

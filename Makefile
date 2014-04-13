@@ -23,10 +23,8 @@
 
 INC=-I/usr/local/include -I./gc/include
 LIB=-L/usr/local/lib -L./gc/lib
-OBJS=inference.o environment.o types.o serial.o symbol.o exception.o ast.o parser.o
-# backend.o
-HEADERS=ast.h exception.h symbol.h serial.h types.h environment.h inference.h
-# backend.h
+OBJS=backend.o inference.o environment.o types.o serial.o symbol.o exception.o ast.o parser.o
+HEADERS=ast.h exception.h symbol.h serial.h types.h environment.h inference.h backend.h
 CS_FLAGS=-O2 -g -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS
 
 bacon: bacon.c $(HEADERS) $(OBJS)

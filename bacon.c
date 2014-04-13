@@ -32,7 +32,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "types.h"
 #include "environment.h"
 #include "inference.h"
-/*#include "backend.h"*/
+#include "backend.h"
 
 #include "parser.c"
 
@@ -45,7 +45,7 @@ int main(void)
 {
    ast_t * a;
    int jval;
-   /*jit_t * jit;*/
+   jit_t * jit;
    
    GC_INIT();
    GREG g;
@@ -54,8 +54,9 @@ int main(void)
    sym_tab_init();
    types_init();
    scope_init();
+   loc_tab_init();
    intrinsics_init();
-   /*jit = llvm_init();*/
+   jit = llvm_init();
 
    yyinit(&g);
 
@@ -81,7 +82,7 @@ int main(void)
             printf("\n");
             /*ast2_print(root, 0);*/
 #endif
-            /*exec_root(jit, root);*/
+            exec_root(jit, root);
             root = NULL;
          }
       } else if (jval == 1)
@@ -92,7 +93,7 @@ int main(void)
       printf("\n> ");
    }
 
-   /*llvm_cleanup(jit);*/
+   llvm_cleanup(jit);
    yydeinit(&g);
     
    printf("\n");
