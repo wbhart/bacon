@@ -43,7 +43,7 @@ typedef enum
    NIL, BOOL, INT, WORD, UWORD, 
    DOUBLE, STRING, CHAR, 
    FN, GENERIC, ARRAY, TUPLE, DATA, 
-   CONSTRUCTOR
+   CONSTRUCTOR, PTR
 } typ_t;
 
 typedef struct type_t
@@ -92,6 +92,8 @@ type_t * data_type(int arity, type_t ** args, sym_t * sym,
                      sym_t ** slots, int num_params, type_t ** params);
 
 type_t * array_type(type_t * element_type);
+
+type_t * pointer_type(type_t * base);
 
 void type_print(type_t * type);
 

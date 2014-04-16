@@ -350,11 +350,25 @@ LLVMTypeRef type_to_llvm(jit_t * jit, type_t * type)
    else if (type->tag == TUPLE)
       return LLVMPointerType(tuple_to_llvm(jit, type), 0);
    else if (type->tag == ARRAY)
-        return LLVMPointerType(array_to_llvm(jit, type), 0);
+      return LLVMPointerType(array_to_llvm(jit, type), 0);
    else if (type->tag == DATA)
-      return LLVMPointerType(LLVMGetTypeByName(jit->module, type->llvm), 0);
+      return LLVMGetTypeByName(jit->module, type->llvm);
+   else if (type->tag == PTR)
+      return LLVMPointerType(type_to_llvm(jit, type->ret), 0);
    else
       jit_exception(jit, "Unknown type in type_to_llvm\n");
+}
+
+/* 
+   Convert a type_t to an LLVMTypeRef with an extra level of indirection
+   for structs
+*/
+LLVMTypeRef type_to_generic_llvm(jit_t * jit, type_t * type)
+{
+   if (type->tag == DATA)
+      return LLVMPointerType(type_to_llvm(jit, type), 0);
+   else
+      return type_to_llvm(jit, type);
 }
 
 /*
@@ -981,11 +995,83 @@ ret_t * exec_assignment(jit_t * jit, ast_t * id, ast_t * expr)
           var = loc_lookup(bind->llvm);
     }
 
+    if (expr->tag == AST_APPL)
+    {
+       /* TODO: see if some of this can be combined with exec_appl */
+       /* check if constructor */
+       type_t * fn_t;
+       ast_t * fn_id = expr->child;
+       bind = find_symbol(fn_id->sym);
+       if (!bind)
+          exception("Symbol not found in function application\n");
+       fn_t = bind->type;
+       if (fn_t->tag == CONSTRUCTOR) {
+          type_t * ty = fn_t->ret;
+          ast_t * exp = fn_id->next;
+          type_t * constr = find_prototype(bind->type, exp);
+          if (constr == NULL)
+             exception("Constructor not found for type\n");
+
+          if (constr->intrinsic)
+          {
+             int i, count = ty->arity;
+             LLVMValueRef * vals = GC_MALLOC(count*sizeof(LLVMValueRef));
+          
+             i = 0;
+             while (exp != NULL)
+             {
+                ret_t * r = exec_ast(jit, exp);
+                vals[i] = r->val;
+                i++;
+                exp = exp->next;
+             }
+
+             LLVMTypeRef t = LLVMGetTypeByName(jit->module, ty->llvm);
+   
+             if (bind->llvm == NULL) /* type not yet defined in LLVM */
+             {
+                LLVMTypeRef * types = GC_MALLOC(count*sizeof(LLVMTypeRef));
+                for (i = 0; i < count; i++)
+                   types[i] = type_to_llvm(jit, ty->args[i]);
+                LLVMStructSetBody(t, types, count, 0);
+                bind->llvm = ty->llvm;
+             }
+
+             for (i = 0; i < count; i++)
+             {
+                /* insert value into struct */
+                LLVMValueRef indices[2] = { LLVMConstInt(LLVMInt32Type(), 0, 0), LLVMConstInt(LLVMInt32Type(), i, 0) };
+                LLVMValueRef entry = LLVMBuildInBoundsGEP(jit->builder, var, indices, 2, ty->sym->name);
+                LLVMBuildStore(jit->builder, vals[i], entry);
+             } 
+          } else
+             exception("User defined constructors not implemented yet\n");
+
+          return ret(0, NULL);
+       }
+    }
+
     expr_ret = exec_ast(jit, expr);
     
     LLVMBuildStore(jit->builder, expr_ret->val, var);
 
     return ret(0, NULL);
+}
+
+/*
+   Jit access to an identifier
+*/
+ret_t * exec_place(jit_t * jit, ast_t * ast)
+{
+    bind_t * bind = find_symbol(ast->sym);
+    LLVMValueRef var;
+
+    if (scope_is_global(bind))
+       var = LLVMGetNamedGlobal(jit->module, bind->llvm);
+    else
+       var = loc_lookup(bind->llvm);
+    
+    return ret(0, var);
 }
 
 /*
@@ -1292,8 +1378,10 @@ ret_t * exec_slot(jit_t * jit, ast_t * ast)
 {
    ast_t * dt = ast->child;
    ast_t * slot = dt->next;
+   ret_t * r;
 
-   ret_t * r = exec_ast(jit, dt);
+   r = exec_ast(jit, dt);
+
    type_t * type = dt->type;
    int i;
 
@@ -1301,9 +1389,7 @@ ret_t * exec_slot(jit_t * jit, ast_t * ast)
       if (type->slots[i] == slot->sym)
             break;
 
-   LLVMValueRef index[2] = { LLVMConstInt(LLVMInt32Type(), 0, 0), LLVMConstInt(LLVMInt32Type(), i, 0) };
-   LLVMValueRef p = LLVMBuildInBoundsGEP(jit->builder, r->val, index, 2, "datatype");
-   LLVMValueRef val = LLVMBuildLoad(jit->builder, p, "slot");
+   LLVMValueRef val = LLVMBuildExtractValue(jit->builder, r->val, i, slot->sym->name);
    
    return ret(0, val);
 }
@@ -1316,7 +1402,10 @@ ret_t * exec_lslot(jit_t * jit, ast_t * ast)
    ast_t * dt = ast->child;
    ast_t * slot = dt->next;
 
-   ret_t * r = exec_ast(jit, dt);
+   ret_t * r;
+
+   r = exec_ast(jit, dt);
+
    type_t * type = dt->type;
    int i;
 
@@ -1487,6 +1576,28 @@ void exec_ret(jit_t * jit, ast_t * ast, LLVMValueRef val)
       LLVMBuildRet(jit->builder, val);
 }
 
+/* 
+   Jit a return with extra level of indirection for structs
+*/
+void exec_generic_ret(jit_t * jit, ast_t * ast, LLVMValueRef val)
+{
+   if (ast->type == t_nil)
+      LLVMBuildRetVoid(jit->builder);
+   else
+   {
+      type_t * ty = ast->type;
+      
+      if (ty->tag == DATA)
+      {
+         LLVMTypeRef dtype = LLVMGetTypeByName(jit->module, ty->llvm);
+         LLVMValueRef val2 = LLVMBuildGCMalloc(jit, dtype, "return", 0);
+         LLVMBuildStore(jit->builder, val, val2);
+         LLVMBuildRet(jit->builder, val2);
+      } else
+         LLVMBuildRet(jit->builder, val);
+   }
+}
+
 /*
    Print the given entry of a struct
 */
@@ -1494,7 +1605,7 @@ void print_struct_entry(jit_t * jit, type_t * type, int i, LLVMGenericValueRef v
 {
    type_t * t = type->args[i];
    LLVMTypeRef lt = type_to_llvm(jit, t);
-   LLVMTypeRef ltype = type_to_llvm(jit, type);
+   LLVMTypeRef ltype = type_to_generic_llvm(jit, type);
    LLVMGenericValueRef gen_val;
    
    LLVMBuilderRef builder = LLVMCreateBuilder();
@@ -1618,13 +1729,13 @@ void exec_root(jit_t * jit, ast_t * ast)
     ret_t * ret;
 
     /* Traverse the ast jit'ing everything, then run the jit'd code */
-    START_EXEC(type_to_llvm(jit, ast->type));
+    START_EXEC(type_to_generic_llvm(jit, ast->type));
          
     /* jit the ast */
     ret = exec_ast(jit, ast);
     
     /* jit the return statement for the exec function */
-    exec_ret(jit, ast, ret->val);
+    exec_generic_ret(jit, ast, ret->val);
     
     /* get the generic return value from exec */
     END_EXEC(gen_val);

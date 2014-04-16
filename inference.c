@@ -179,6 +179,39 @@ int find_slot(type_t * t, sym_t * sym)
 }
 
 /*
+   Given a function type t, check if its prototype matches the
+   types given by the (already type inferred) AST parameter
+   list. If so, return a pointer to the function type, else
+   return NULL.
+
+   If the "method" parameter is 0, the function is treated like
+   an ordinary function, otherwise it is treated as a method and
+   the first parameter is ignored.
+*/
+
+type_t * match_prototype(type_t * t, ast_t * a, int method)
+{
+   int j;
+   int c = ast_count(a);
+   ast_t * a2 = a;
+
+   if (t->arity == c + method)
+   {
+      for (j = 0; j < c; j++)
+      {
+         if (t->args[j + method] != a2->type)
+            break;
+         a2 = a2->next;
+      }
+
+      if (j == c)
+         return t;
+   }
+
+   return NULL;
+}
+
+/*
    Given a generic or constructor type t, search through its 
    current list of functions to find one with prototype matching 
    the types given by the (already type inferred) AST parameter 
@@ -193,32 +226,14 @@ type_t * find_prototype(type_t * t, ast_t * a)
    int c = ast_count(a);
    ast_t * a2;
 
-   if (t->tag == FN)
+   for (i = 0; i < t->arity; i++)
    {
+      type_t * fn = t->args[i];
       a2 = a;
 
-      if (t->arity == c)
-      {
-         for (j = 0; j < c; j++)
-         {
-            if (t->args[j] != a2->type)
-               break;
-            a2 = a2->next;
-         }
-
-         if (j == c)
-            return t;
-      }
-   } else /* generic or type constructor */
-   {
-      for (i = 0; i < t->arity; i++)
-      {
-         type_t * fn = t->args[i];
-         a2 = a;
-
-         if ((fn = find_prototype(fn, a)))
-            return fn;
-      }
+      /* we set flag to indicate if first (method) arg is to be ignored */
+      if ((fn = match_prototype(fn, a, t->tag == CONSTRUCTOR)))
+         return fn;
    }
    
    return NULL; /* didn't find an op with that prototype */
@@ -338,17 +353,19 @@ void inference(ast_t * a)
       a2 = a1->next; /* data body */
       a3 = a2->child; /* list of slots with types */
       i = ast_count(a3); /* number of slots */
-      args = GC_MALLOC(i*sizeof(type_t *)); /* types of slots */
+      args = GC_MALLOC((i + 1)*sizeof(type_t *)); /* types of slots */
       slots = GC_MALLOC(i*sizeof(sym_t *)); /* slot names */
       t1 = data_type(i, args, a1->sym, slots, 0, NULL); /* the new type being created */
-      f1 = fn_type(t1, i, args); /* the constructor function */
+      f1 = fn_type(t1, i + 1, args); /* the constructor function */
+      f1->intrinsic = 1; /* default constructors are intrinsic (they just copy values) */
       fns = GC_MALLOC(sizeof(type_t *)); /* one automatic constructor function */
       fns[0] = f1;
       t2 = constructor_type(a1->sym, t1, 1, fns); /* generic constructor */
       bind_symbol(a1->sym, t2, NULL); /* bind new type name to generic constructor */
       inference(a2); /* infer types in data declaration body */
-      assign_args(f1->args, a3); /* infer constructor function parameter types */
+      assign_args(f1->args + 1, a3); /* infer constructor function parameter types */
       assign_args(t1->args, a3); /* infer types of slots in new data type */
+      f1->args[0] = pointer_type(t1); /* first arg is for `this' */
       assign_syms(t1->slots, a3); /* fill in slot names in new data type */
       a->type = t_nil;
       break;
@@ -391,6 +408,7 @@ void inference(ast_t * a)
       i = ast_count(a2->child);
       args = GC_MALLOC(i*sizeof(type_t *));
       f1 = fn_type(a3->type, i, args); /* new type for function; always distinct */
+      f1->intrinsic = 1; /* constructor function is intrinsic by default */
       assign_args(f1->args, a2->child); /* fill in types of fn arguments */
       f1->ast = a; /* store ast for second inference round when jit'ing body */
       scope_down(); /* back to global scope (where fn will live */

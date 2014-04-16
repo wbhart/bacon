@@ -197,6 +197,19 @@ type_t * array_type(type_t * el_type)
    return t;
 }
 
+/* TODO: should base be made a parameter type? */
+type_t * pointer_type(type_t * base)
+{
+   int i;
+   
+   type_t * t = (type_t *) GC_MALLOC(sizeof(type_t));
+   t->tag = PTR;
+   t->ret = base;
+   
+   return t;
+}
+
+
 void type_print(type_t * type)
 {
    int i;
@@ -240,6 +253,11 @@ void type_print(type_t * type)
       printf("array[");
       type_print(type->params[0]);
       printf("]\n");
+      break;
+   case PTR:
+      printf("pointer<");
+      type_print(type->ret);
+      printf(">\n");
       break;
    case FN:
       for (i = 0; i < type->arity - 1; i++)
