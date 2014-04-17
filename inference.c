@@ -355,7 +355,7 @@ void inference(ast_t * a)
       i = ast_count(a3); /* number of slots */
       args = GC_MALLOC((i + 1)*sizeof(type_t *)); /* types of slots */
       slots = GC_MALLOC(i*sizeof(sym_t *)); /* slot names */
-      t1 = data_type(i, args, a1->sym, slots, 0, NULL); /* the new type being created */
+      t1 = data_type(i, args + 1, a1->sym, slots, 0, NULL); /* the new type being created */
       f1 = fn_type(t1, i + 1, args); /* the constructor function */
       f1->intrinsic = 1; /* default constructors are intrinsic (they just copy values) */
       fns = GC_MALLOC(sizeof(type_t *)); /* one automatic constructor function */

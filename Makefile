@@ -21,14 +21,14 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, 
 # EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-INC=-I/usr/local/include -I./gc/include 
-LIB=-L/usr/local/lib -L./gc/lib
+INC=-I/usr/local/include -I./gc/include -I/home/wbhart/flint2 
+LIB=-L/usr/local/lib -L./gc/lib -L/home/wbhart/flint2 -L/home/wbhart/mpir-git/.libs
 OBJS=backend.o inference.o environment.o types.o serial.o symbol.o exception.o ast.o parser.o
 HEADERS=ast.h exception.h symbol.h serial.h types.h environment.h inference.h backend.h
 CS_FLAGS=-O2 -g -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS
 
 bacon: bacon.c $(HEADERS) $(OBJS)
-	g++ $(CS_FLAGS) bacon.c -o $(INC) $(OBJS) $(LIB) -lgc `/usr/local/bin/llvm-config --libs --cflags --ldflags core analysis executionengine jit interpreter native` -o bacon -ldl -lpthread
+	g++ $(CS_FLAGS) bacon.c -o $(INC) $(OBJS) $(LIB) -lgc `/usr/local/bin/llvm-config --libs --cflags --ldflags core analysis executionengine jit interpreter native` -o bacon -ldl -lpthread -lflint -lmpir
 
 ast.o: ast.c $(HEADERS)
 	gcc $(CS_FLAGS) -c ast.c -o ast.o $(INC)
