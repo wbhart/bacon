@@ -49,7 +49,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  extern "C" {
 #endif
 
-#define TRACE 1 /* prints lots of ast and llvm trace info */
+#define TRACE 0 /* prints lots of ast and llvm trace info */
 
 #define LOC_TAB_SIZE 10000 /* size of llvm locals hash table */
 
@@ -57,6 +57,8 @@ typedef struct loc_t {
    char * name;
    LLVMValueRef llvm_val;
 } loc_t;
+
+extern loc_t ** loc_tab;
 
 void loc_tab_init(void);
 

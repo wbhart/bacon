@@ -40,7 +40,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 typedef enum
 {
-   NIL, BOOL, INT, WORD, UWORD, 
+   NIL, BOOL, ZZ, INT, UINT, 
    DOUBLE, STRING, CHAR, 
    FN, GENERIC, ARRAY, TUPLE, DATA, 
    CONSTRUCTOR, PTR
@@ -69,12 +69,15 @@ typedef struct type_node_t
 
 extern type_t * t_nil;
 extern type_t * t_bool;
+extern type_t * t_ZZ;
+extern type_t * t_uint;
 extern type_t * t_int;
-extern type_t * t_uword;
-extern type_t * t_word;
 extern type_t * t_double;
 extern type_t * t_string;
 extern type_t * t_char;
+
+extern type_node_t * tuple_type_list;
+extern type_node_t * array_type_list;
 
 type_t * new_type(char * name, typ_t tag);
 

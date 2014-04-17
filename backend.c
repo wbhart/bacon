@@ -337,7 +337,7 @@ LLVMTypeRef type_to_llvm(jit_t * jit, type_t * type)
 {
    if (type == t_nil)
       return LLVMVoidType();
-   else if (type == t_word || type == t_uword)
+   else if (type == t_int || type == t_uint)
       return LLVMWordType();
    else if (type == t_double)
       return LLVMDoubleType();
@@ -385,7 +385,7 @@ ret_t * ret(int closed, LLVMValueRef val)
 /*
    Jit an int literal
 */
-ret_t * exec_word(jit_t * jit, ast_t * ast)
+ret_t * exec_int(jit_t * jit, ast_t * ast)
 {
     long num = atol(ast->sym->name);
     
@@ -397,7 +397,7 @@ ret_t * exec_word(jit_t * jit, ast_t * ast)
 /*
    Jit a uint literal
 */
-ret_t * exec_uword(jit_t * jit, ast_t * ast)
+ret_t * exec_uint(jit_t * jit, ast_t * ast)
 {
     unsigned long num = strtoul(ast->sym->name, NULL, 10);
     
@@ -809,7 +809,13 @@ ret_t * exec_decl(jit_t * jit, ast_t * ast)
       LLVMSetInitializer(val, LLVMGetUndef(type));
    } else
    {
-      val = LLVMBuildAlloca(jit->builder, type, llvm);
+      LLVMBasicBlockRef second = LLVMGetFirstBasicBlock(jit->function);
+      LLVMBasicBlockRef first = LLVMInsertBasicBlock(second, serialise("decl"));
+      LLVMBuilderRef builder = LLVMCreateBuilder();
+      LLVMPositionBuilderAtEnd(builder, first);
+      val = LLVMBuildAlloca(builder, type, llvm);
+      LLVMBuildBr(builder, second);
+      LLVMDisposeBuilder(builder);
       loc_insert(llvm, val);
    }
    
@@ -1509,10 +1515,10 @@ ret_t * exec_ast(jit_t * jit, ast_t * ast)
 {
     switch (ast->tag)
     {
-    case AST_WORD:
-        return exec_word(jit, ast);
-    case AST_UWORD:
-        return exec_uword(jit, ast);
+    case AST_INT:
+        return exec_int(jit, ast);
+    case AST_UINT:
+        return exec_uint(jit, ast);
     case AST_DOUBLE:
         return exec_double(jit, ast);
     case AST_CHAR:
@@ -1677,9 +1683,9 @@ void print_gen(jit_t * jit, type_t * type, LLVMGenericValueRef gen_val)
    
    if (type == t_nil)
       printf("none");
-   else if (type == t_word)
+   else if (type == t_int)
       printf("%ld", (long) LLVMGenericValueToInt(gen_val, 1));
-   else if (type == t_uword)
+   else if (type == t_uint)
       printf("%luu", (unsigned long) LLVMGenericValueToInt(gen_val, 0));
    else if (type == t_double)
       printf("%lg", (double) LLVMGenericValueToFloat(LLVMDoubleType(), gen_val));

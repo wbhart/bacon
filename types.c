@@ -28,9 +28,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 type_t * t_nil;
 type_t * t_bool;
+type_t * t_ZZ;
 type_t * t_int;
-type_t * t_word;
-type_t * t_uword;
+type_t * t_uint;
 type_t * t_double;
 type_t * t_string;
 type_t * t_char;
@@ -51,9 +51,9 @@ void types_init(void)
 {
    t_nil = new_type("nil", NIL);
    t_bool = new_type("bool", NIL);
+   t_ZZ = new_type("ZZ", ZZ);
    t_int = new_type("int", INT);
-   t_word = new_type("word", WORD);
-   t_uword = new_type("uword", UWORD);
+   t_uint = new_type("uint", UINT);
    t_double = new_type("double", DOUBLE);
    t_string = new_type("string", STRING);
    t_char = new_type("char", CHAR);
@@ -219,14 +219,14 @@ void type_print(type_t * type)
    case BOOL:
       printf("bool");
       break;
+   case ZZ:
+      printf("ZZ");
+      break;
    case INT:
       printf("int");
       break;
-   case WORD:
-      printf("word");
-      break;
-   case UWORD:
-      printf("uword");
+   case UINT:
+      printf("uint");
       break;
    case DOUBLE:
       printf("double");

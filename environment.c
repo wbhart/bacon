@@ -40,7 +40,7 @@ void intrinsics_init(void)
    type_t ** args = GC_MALLOC(2*sizeof(type_t *));
    type_t ** fns = GC_MALLOC(12*sizeof(type_t *));
    
-   type_t * type_list[4] = { t_int, t_word, t_uword, t_double };
+   type_t * type_list[4] = { t_ZZ, t_int, t_uint, t_double };
 
    for (i = 0; i < 4; i++)
    {
@@ -72,9 +72,9 @@ void intrinsics_init(void)
    bind_generic(sym_lookup(">"), generic_type(4, fns));
 
    bind_symbol(sym_lookup("nil"), t_nil, NULL);
+   bind_symbol(sym_lookup("ZZ"), t_ZZ, NULL);
    bind_symbol(sym_lookup("int"), t_int, NULL);
-   bind_symbol(sym_lookup("word"), t_word, NULL);
-   bind_symbol(sym_lookup("uword"), t_uword, NULL);
+   bind_symbol(sym_lookup("uint"), t_uint, NULL);
    bind_symbol(sym_lookup("bool"), t_bool, NULL);
    bind_symbol(sym_lookup("double"), t_double, NULL);
    bind_symbol(sym_lookup("string"), t_string, NULL);

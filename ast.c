@@ -119,9 +119,9 @@ void ast_print(ast_t * ast, int indent)
       case AST_NONE:
          printf("none\n");
          break;
+      case AST_ZZ:
       case AST_INT:
-      case AST_WORD:
-      case AST_UWORD:
+      case AST_UINT:
       case AST_DOUBLE:
       case AST_CHAR:
       case AST_STRING:

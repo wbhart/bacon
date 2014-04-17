@@ -21,7 +21,7 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, 
 # EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-INC=-I/usr/local/include -I./gc/include
+INC=-I/usr/local/include -I./gc/include 
 LIB=-L/usr/local/lib -L./gc/lib
 OBJS=backend.o inference.o environment.o types.o serial.o symbol.o exception.o ast.o parser.o
 HEADERS=ast.h exception.h symbol.h serial.h types.h environment.h inference.h backend.h

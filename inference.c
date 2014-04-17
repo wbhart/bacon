@@ -257,14 +257,14 @@ void inference(ast_t * a)
    case AST_NONE:
       a->type = t_nil;
       break;
+   case AST_ZZ:
+      a->type = t_ZZ;
+      break;
    case AST_INT:
       a->type = t_int;
       break;
-   case AST_WORD:
-      a->type = t_word;
-      break;
-   case AST_UWORD:
-      a->type = t_uword;
+   case AST_UINT:
+      a->type = t_uint;
       break;
    case AST_DOUBLE:
       a->type = t_double;
@@ -457,8 +457,8 @@ void inference(ast_t * a)
       a2 = a1->next; /* expression giving number of elements */
       inference(a2);
       inference(a1);
-      if (a2->type != t_word)
-         exception("Number of elements in an array must be a word\n");
+      if (a2->type != t_int)
+         exception("Number of elements in an array must be an int\n");
       t1 = array_type(a1->type); /* type of array is parameterised by type of elements */
       a->type = t1;
       break;
@@ -504,8 +504,8 @@ void inference(ast_t * a)
       a1 = a->child; /* the root of the locn (array name, appl, slot or another locn) */
       a2 = a1->next; /* expression giving the index in the array */
       inference(a2);
-      if (a2->type != t_word)
-         exception("Array index must be of word type\n");
+      if (a2->type != t_int)
+         exception("Array index must be of int type\n");
       inference(a1);
       t1 = a1->type; /* type of root */
       if (t1->tag != ARRAY)

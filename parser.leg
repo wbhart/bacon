@@ -144,7 +144,7 @@ Infix20          = r:Infix10 ( ( Plus s:Infix10 { r = ast_binop(sym_lookup("+"),
 Infix10          = r:Primary ( ( Times s:Primary { r = ast_binop(sym_lookup("*"), r, s); } )
                    | ( Div s:Primary { r = ast_binop(sym_lookup("/"), r, s); } ) 
                    | ( Mod s:Primary { r = ast_binop(sym_lookup("%"), r, s); } ) )* { $$ = r; }
-Primary          = ArrayConstructor | Reference | Double | Uword | Word | Int | String | Char | Identifier
+Primary          = ArrayConstructor | Reference | Double | Uint | Int | ZZ | String | Char | Identifier
                    | ( LParen Expr RParen ) | Tuple | IfElseExpr
                 
 Tuple            = LParen r:TupleBody RParen { $$ = ast1(AST_TUPLE, r); }
@@ -161,7 +161,7 @@ IdentStart       = [a-zA-Z_]
 IdentCont        = IdentStart | [0-9]
 
 Reserved         = ( 'while' | 'if' | 'else' | 'type' | 'return' | 'fn' | 'array' | 'break' ) ![a-zA-Z0-9_]
-TypeReserved     = ( 'int' | 'word' | 'uword' | 'char' | 'string' | 'double' | 'nil' ) ![a-zA-Z0-9_]
+TypeReserved     = ( 'ZZ' | 'int' | 'uint' | 'char' | 'string' | 'double' | 'nil' ) ![a-zA-Z0-9_]
 
 Double           = < ( [1-9] [0-9]* | '0' ) '.' [0-9]* 
                    ( ( 'e' | 'E' ) ( '+' | '-' )? ( [1-9] [0-9]* | '0' ) )? > Spacing
@@ -169,20 +169,20 @@ Double           = < ( [1-9] [0-9]* | '0' ) '.' [0-9]*
                       sym_t * sym = sym_lookup(yytext);
                       $$ = ast_symbol(AST_DOUBLE, sym);
                    } 
+ZZ               = < ( [1-9] [0-9]* | '0' ) > Spacing
+                   {
+                      sym_t * sym = sym_lookup(yytext);
+                      $$ = ast_symbol(AST_ZZ, sym);
+                   }
 Int              = < ( [1-9] [0-9]* | '0' ) > 'i' Spacing
                    {
                       sym_t * sym = sym_lookup(yytext);
                       $$ = ast_symbol(AST_INT, sym);
                    }
-Word             = < ( [1-9] [0-9]* | '0' ) >  Spacing
+Uint             = < ( [1-9] [0-9]* | '0' ) > 'u' Spacing
                    {
                       sym_t * sym = sym_lookup(yytext);
-                      $$ = ast_symbol(AST_WORD, sym);
-                   }
-Uword            = < ( [1-9] [0-9]* | '0' ) > 'u' Spacing
-                   {
-                      sym_t * sym = sym_lookup(yytext);
-                      $$ = ast_symbol(AST_UWORD, sym);
+                      $$ = ast_symbol(AST_UINT, sym);
                    }
 Char             = ( ['] < ![\\'"] . > ['] ) Spacing
                    {

@@ -41,6 +41,8 @@ typedef struct sym_t {
    char * name;
 } sym_t;
 
+extern sym_t ** sym_tab;
+
 void sym_tab_init(void);
 
 void print_sym_tab(void);
