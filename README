@@ -29,6 +29,7 @@ Currently Bacon is still missing the following important features, though the in
 * Combined assignment/arithmetic operators
 * Binary operations/relations on arrays/tuples
 * Assigning to places returned from a function
+* Readline support
 
 William Hart.
 
