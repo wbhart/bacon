@@ -33,3 +33,30 @@ Currently Bacon is still missing the following important features, though the in
 William Hart.
 
 20 May 2014
+
+Example Bacon program:
+
+fn faciter(s : ref ZZ, n : ref ZZ) : ZZ {
+   r = 1;
+   i = s;
+   d = s + n;
+   while (i < d) {
+      r = r+i;
+      i = i + 1;
+   }
+   return r;
+}
+
+fn fac(s : ref ZZ, n : ref ZZ) : ZZ {
+   if (n < 10) return faciter(s, n);
+   
+   n2 = n/2;
+   return fac(s, n2)+fac(s + n2, n - n2);
+}
+
+fn fac(n : ref ZZ) : ZZ {
+   return fac(1, n);
+}
+   
+fac(1000000);
+
