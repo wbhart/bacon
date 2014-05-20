@@ -65,6 +65,8 @@ bind_t * bind_symbol(sym_t * sym, type_t * type, char * llvm);
 
 bind_t * find_symbol(sym_t * sym);
 
+bind_t * find_symbol_in_current_scope(sym_t * sym);
+
 env_t * scope_up(void);
 
 void scope_down(void);

@@ -202,6 +202,9 @@ void ast_print(ast_t * ast, int indent)
       case AST_TYPE_NAME:
          printf("type_name\n");
          break;
+      case AST_REF_TYPE_NAME:
+         printf("ref type_name\n");
+         break;
       case AST_TUPLE_TYPE:
          printf("tuple_type\n");
          break;

@@ -35,9 +35,14 @@ type_t * t_double;
 type_t * t_string;
 type_t * t_char;
 
+type_t * t_finalizer; /* initialised in ffi.c, currently */
+type_t * t_assignment;
+
 type_node_t * tuple_type_list;
 
 type_node_t * array_type_list;
+
+type_node_t * ref_type_list;
 
 type_t * new_type(char * name, typ_t tag)
 {
@@ -51,7 +56,6 @@ void types_init(void)
 {
    t_nil = new_type("nil", NIL);
    t_bool = new_type("bool", NIL);
-   t_ZZ = new_type("ZZ", ZZ);
    t_int = new_type("int", INT);
    t_uint = new_type("uint", UINT);
    t_double = new_type("double", DOUBLE);
@@ -60,6 +64,7 @@ void types_init(void)
 
    tuple_type_list = NULL;
    array_type_list = NULL;
+   ref_type_list = NULL;
 }
 
 type_t * fn_type(type_t * ret, int arity, type_t ** args)
@@ -108,6 +113,95 @@ type_t * constructor_type(sym_t * sym, type_t * type, int arity, type_t ** args)
       t->args[i] = args[i];
 
    return t;
+}
+
+/*
+   Given a constructor (type) t, and a list of c argument types
+   arg, find the constructor matching those types in t, else
+   return NULL.
+*/
+type_t * find_constructor(type_t * t, type_t ** args, int c)
+{
+   int i, j;
+   
+   for (i = 0; i < t->arity; i++)
+   {
+      type_t * fn = t->args[i];
+      
+      if (fn->arity == c + 1)
+      {
+         for (j = 0; j < c; j++)
+         {
+            if (fn->args[j + 1] != args[j] && fn->args[j + 1] != reference_type(args[j]))
+               break;
+         }
+
+         if (j == c)
+            return fn;
+      }
+   }
+
+   return NULL;
+}
+
+/*
+   Given an argument type arg, find the finaliser matching 
+   that type in t, else return NULL.
+*/
+type_t * find_finalizer(type_t * arg)
+{
+   int i;
+   
+   for (i = 0; i < t_finalizer->arity; i++)
+   {
+      type_t * fn = t_finalizer->args[i];
+      
+      if (fn->args[0] == reference_type(arg))
+         return fn;
+   }
+
+   return NULL;
+}
+
+/*
+   Given a generic assignment (type) t, and argument type, find 
+   the assignment operator matching that type in t, else return 
+   NULL.
+*/
+type_t * find_assignment(type_t * type)
+{
+   int i;
+   
+   for (i = 0; i < t_assignment->arity; i++)
+   {
+      type_t * fn = t_assignment->args[i];
+      
+      if (fn->args[0] == reference_type(type) 
+       && fn->args[1] == reference_type(type))
+         return fn;
+   }
+
+   return NULL;
+}
+
+/*
+   Given a generic constructor (type) t find the copy 
+   constructor for that type in t, else return NULL.
+*/
+type_t * find_copy_cons(type_t * t)
+{
+   int i;
+   type_t * arg = reference_type(t->ret);
+
+   for (i = 0; i < t->arity; i++)
+   {
+      type_t * fn = t->args[i];
+      
+      if (fn->args[0] == arg && fn->args[1] == arg)
+         return fn;
+   }
+
+   return NULL;
 }
 
 type_t * tuple_type(int arity, type_t ** args)
@@ -209,6 +303,33 @@ type_t * pointer_type(type_t * base)
    return t;
 }
 
+type_t * reference_type(type_t * base)
+{
+   int i;
+   
+   type_t * t = (type_t *) GC_MALLOC(sizeof(type_t));
+   t->tag = REF;
+   t->ret = base;
+
+   type_node_t * s = ref_type_list;
+
+   /* ensure we return a unique ref type for given arg type */
+   while (s != NULL)
+   {
+      if (s->type->ret == base)
+         return s->type;
+      
+      s = s->next;
+   }
+
+   s = GC_MALLOC(sizeof(type_node_t));
+   s->type = t;
+   s->next = ref_type_list;
+   ref_type_list = s;
+
+   return t;
+}
+ 
 
 void type_print(type_t * type)
 {
@@ -218,9 +339,6 @@ void type_print(type_t * type)
    {
    case BOOL:
       printf("bool");
-      break;
-   case ZZ:
-      printf("ZZ");
       break;
    case INT:
       printf("int");
@@ -258,6 +376,11 @@ void type_print(type_t * type)
       printf("pointer<");
       type_print(type->ret);
       printf(">\n");
+      break;
+   case REF:
+      printf("ref ");
+      type_print(type->ret);
+      printf("\n");
       break;
    case FN:
       for (i = 0; i < type->arity - 1; i++)

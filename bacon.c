@@ -32,6 +32,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "types.h"
 #include "environment.h"
 #include "inference.h"
+#include "ffi.h"
 #include "backend.h"
 
 #include "parser.c"
@@ -57,7 +58,8 @@ int main(void)
    loc_tab_init();
    intrinsics_init();
    jit = llvm_init();
-
+   ZZ_init(jit);
+   
    yyinit(&g);
 
    printf("Welcome to Bacon v0.1\n\n");

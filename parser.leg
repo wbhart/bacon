@@ -76,7 +76,7 @@ Locn             = LBrack e:Expr RBrack { $$ = e; }
 
 Block            = LBrace c:BlockBody RBrace { $$ = ast1(AST_BLOCK, c); }
                    | LBrace RBrace { $$ = ast1(AST_BLOCK, NULL); }
-                   | Stmt
+                   | s:Stmt { $$ = ast1(AST_BLOCK, s); }
 BlockBody        = r:Stmt Spacing s:BlockBody { r->next = s; $$ = r; }
                    | r:Stmt
 
@@ -111,6 +111,7 @@ ParamList        = LParen p:ParamBody RParen
 ParamBody        = r:Param Comma s:ParamBody { r->next = s->child; $$ = ast1(AST_PARAM_BODY, r); }
                    | r:Param { $$ = ast1(AST_PARAM_BODY, r); }
 Param            = Spacing i:Identifier Colon r:TypeExpr { $$ = ast2(AST_PARAM, i, r); }
+                   | Spacing i:Identifier Colon r:TypeExpr { $$ = ast2(AST_PARAM, i, r); }
 
 ReturnStmt       = Return e:Expr { $$ = ast1(AST_RETURN, e); }
                    | Return { $$ = ast1(AST_RETURN, ast_nil); }
@@ -120,7 +121,12 @@ ArrayConstructor = Array LBrack t:TypeExpr RBrack LParen e:Expr RParen { $$ = as
 TypeExpr         = ArrayType
                    | TupleType
                    | Typename
-Typename         = !Reserved < IdentStart IdentCont* > Spacing
+Typename         = 'ref' Spacing !Reserved < IdentStart IdentCont* > Spacing
+                   {
+                      sym_t * sym = sym_lookup(yytext);
+                      $$ = ast_symbol(AST_REF_TYPE_NAME, sym);
+                   }
+                   | !Reserved < IdentStart IdentCont* > Spacing
                    {
                       sym_t * sym = sym_lookup(yytext);
                       $$ = ast_symbol(AST_TYPE_NAME, sym);
@@ -161,7 +167,7 @@ IdentStart       = [a-zA-Z_]
 IdentCont        = IdentStart | [0-9]
 
 Reserved         = ( 'while' | 'if' | 'else' | 'type' | 'return' | 'fn' | 'array' | 'break' ) ![a-zA-Z0-9_]
-TypeReserved     = ( 'ZZ' | 'int' | 'uint' | 'char' | 'string' | 'double' | 'nil' ) ![a-zA-Z0-9_]
+TypeReserved     = ( 'ref' | 'ZZ' | 'int' | 'uint' | 'char' | 'string' | 'double' | 'nil' ) ![a-zA-Z0-9_]
 
 Double           = < ( [1-9] [0-9]* | '0' ) '.' [0-9]* 
                    ( ( 'e' | 'E' ) ( '+' | '-' )? ( [1-9] [0-9]* | '0' ) )? > Spacing

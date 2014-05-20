@@ -36,6 +36,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ast.h"
 #include "serial.h"
 
+#include "flint.h"
+#include "fmpz.h"
+
 #include <llvm-c/Core.h>  
 #include <llvm-c/Analysis.h>  
 #include <llvm-c/ExecutionEngine.h>  
@@ -50,6 +53,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 #define TRACE 0 /* prints lots of ast and llvm trace info */
+#define TRACE2 0 /* print out when constructors/destructors/assignments are jit'd */
 
 #define LOC_TAB_SIZE 10000 /* size of llvm locals hash table */
 
@@ -97,7 +101,17 @@ void llvm_cleanup(jit_t * jit);
 
 LLVMTypeRef type_to_llvm(jit_t * jit, type_t * type);
 
+LLVMValueRef create_var(jit_t * jit, sym_t * sym, char * llvm, type_t * t);
+
 ret_t * exec_tuple_unpack_val(jit_t * jit, ast_t * ast1, LLVMValueRef val, type_t * type);
+
+ret_t * exec_destructors(jit_t * jit, LLVMValueRef retval);
+
+int requires_constructor(type_t * t);
+
+void call_constructors(jit_t * jit, LLVMValueRef locn, type_t * type);
+
+ret_t * exec_appl(jit_t * jit, ast_t * ast, int cleanup);
 
 ret_t * exec_ast(jit_t * jit, ast_t * ast);
 

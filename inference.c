@@ -55,7 +55,7 @@ void assign_inference(ast_t * a, type_t * b)
        bind = find_symbol(a->sym); /* look up identifier */
        if (!bind) /* identifier doesn't exist */
           bind_symbol(a->sym, b, NULL); /* put new identifier in scope */
-       else if (b != bind->type) /* identifier type doesn't match expression type */
+       else if (b != bind->type && reference_type(b) != bind->type) /* identifier type doesn't match expression type */
              exception("Identifier type doesn't match expression type in assignment\n");
        a->type = b; /* infer type of identifier */
     } else if (a->tag == AST_LTUPLE)
@@ -199,7 +199,8 @@ type_t * match_prototype(type_t * t, ast_t * a, int method)
    {
       for (j = 0; j < c; j++)
       {
-         if (t->args[j + method] != a2->type)
+         if (t->args[j + method] != a2->type
+            && t->args[j + method] != reference_type(a2->type))
             break;
          a2 = a2->next;
       }
@@ -396,6 +397,15 @@ void inference(ast_t * a)
       else /* TODO: this case shouldn't exist; conversions are just constructors */
          a->type = bind->type; /* for built-in types symbol is bound to type itself */
       break;
+   case AST_REF_TYPE_NAME:
+      bind = find_symbol(a->sym); /* look up type name */
+      if (!bind)
+         exception("Type name not found\n");
+      else if (bind->type->tag == CONSTRUCTOR)
+         a->type = reference_type(bind->type->ret); /* constructor returns an object of given type */
+      else /* TODO: this case shouldn't exist; conversions are just constructors */
+         a->type = reference_type(bind->type); /* for built-in types symbol is bound to type itself */
+      break;
    case AST_FN_STMT: /* called initially when AST for fn declaration is first traversed */
       a1 = a->child; /* function name */
       a2 = a1->next; /* param list */
@@ -472,7 +482,10 @@ void inference(ast_t * a)
       bind = find_symbol(a->sym); /* look up identifier */
       if (!bind)
          exception("Symbol not found in expression\n");
-      a->type = bind->type;
+      if (bind->type->tag == REF)
+         a->type = bind->type->ret;
+      else
+         a->type = bind->type;
       break;
    case AST_TUPLE:
       a1 = a->child; /* list of expressions in tuple */
@@ -518,6 +531,20 @@ void inference(ast_t * a)
       a1 = a->child; /* the root of the appl (fn name, locn, slot or another appl) */
       a2 = a1->next; /* list of arguments for function application */
       list_inference(a2);
+      /* TODO: remove this hack for swap (which needs to be parametric */
+      if (a1->tag == AST_IDENT && a1->sym == sym_lookup("swap"))
+      {
+         if (ast_count(a2) != 2)
+            exception("Incorrect number of arguments to swap\n");
+         if (a2->type != a2->next->type)
+            exception("Types do not match in swap\n");
+         if (a2->type->tag == ARRAY || a2->type->tag == DATA)
+         {
+            a1->type = t_nil;
+            a->type = t_nil;
+            break;
+         }
+      } 
       inference(a1);
       t1 = a1->type; /* type of root */
       if (t1->tag != GENERIC && t1->tag != CONSTRUCTOR)

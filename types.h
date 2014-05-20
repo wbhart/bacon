@@ -40,10 +40,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 typedef enum
 {
-   NIL, BOOL, ZZ, INT, UINT, 
+   NIL, BOOL, INT, UINT, 
    DOUBLE, STRING, CHAR, 
    FN, GENERIC, ARRAY, TUPLE, DATA, 
-   CONSTRUCTOR, PTR
+   CONSTRUCTOR, PTR, REF
 } typ_t;
 
 typedef struct type_t
@@ -56,7 +56,7 @@ typedef struct type_t
    struct sym_t ** slots; /* names of data slots */
    int num_params; /* number of type parameters (parameterised types) */
    struct type_t ** params; /* type parameters (parameterised types) */
-   int intrinsic; /* is this an intrinsic function/operator ? */
+   int intrinsic; /* is this an intrinsic function/operator */
    char * llvm; /* llvm serialised name of type (for lookup in backend) */
    struct ast_t * ast; /* the ast of fn body (fns/generics) */
 } type_t;
@@ -76,6 +76,9 @@ extern type_t * t_double;
 extern type_t * t_string;
 extern type_t * t_char;
 
+extern type_t * t_finalizer;
+extern type_t * t_assignment;
+
 extern type_node_t * tuple_type_list;
 extern type_node_t * array_type_list;
 
@@ -89,6 +92,14 @@ type_t * generic_type(int arity, type_t ** args);
 
 type_t * constructor_type(sym_t * sym, type_t * type, int arity, type_t ** args);
 
+type_t * find_constructor(type_t * t, type_t ** args, int c);
+
+type_t * find_finalizer(type_t * arg);
+
+type_t * find_assignment(type_t * type);
+
+type_t * find_copy_cons(type_t * t);
+
 type_t * tuple_type(int arity, type_t ** args);
 
 type_t * data_type(int arity, type_t ** args, sym_t * sym, 
@@ -97,6 +108,8 @@ type_t * data_type(int arity, type_t ** args, sym_t * sym,
 type_t * array_type(type_t * element_type);
 
 type_t * pointer_type(type_t * base);
+
+type_t * reference_type(type_t * base);
 
 void type_print(type_t * type);
 

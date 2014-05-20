@@ -24,26 +24,29 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#include "serial.h"
+#include <stdio.h>
+#include <stdlib.h>
 
-char * serial()
-{
-   char * u = GC_MALLOC(11);
-   int i = (int) rand();
-   sprintf(u, "%x", i);
-   return u;
-}
+#include "gc.h"
+#include "types.h"
+#include "environment.h"
+#include "symbol.h"
+#include "backend.h"
+#include "flint.h"
+#include "fmpz.h"
 
-/*
-   Serialise a string (identifier)
-*/
-char * serialise(const char * name)
-{
-   int len = strlen(name);
-   char * ser = GC_MALLOC(len + 12);
+#ifndef FFI_H
+#define FFI_H
 
-   strcpy(ser, name);
-   strcpy(ser + len, serial());
-   
-   return ser;
-}
+#ifdef __cplusplus
+ extern "C" {
+#endif
+
+void ZZ_init(jit_t * jit);
+
+#ifdef __cplusplus
+ }
+#endif
+
+#endif
+

@@ -23,8 +23,8 @@
 
 INC=-I/usr/local/include -I./gc/include -I/home/wbhart/flint2 
 LIB=-L/usr/local/lib -L./gc/lib -L/home/wbhart/flint2 -L/home/wbhart/mpir-git/.libs
-OBJS=backend.o inference.o environment.o types.o serial.o symbol.o exception.o ast.o parser.o
-HEADERS=ast.h exception.h symbol.h serial.h types.h environment.h inference.h backend.h
+OBJS=backend.o inference.o environment.o types.o serial.o ffi.o symbol.o exception.o ast.o parser.o
+HEADERS=ast.h exception.h symbol.h serial.h types.h environment.h inference.h ffi.h backend.h
 CS_FLAGS=-O2 -g -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS
 
 bacon: bacon.c $(HEADERS) $(OBJS)
@@ -53,6 +53,9 @@ inference.o: inference.c $(HEADERS)
 
 serial.o: serial.c $(HEADERS)
 	gcc $(CS_FLAGS) -c serial.c -o serial.o $(INC)
+
+ffi.o: ffi.c $(HEADERS)
+	gcc $(CS_FLAGS) -c ffi.c -o ffi.o $(INC)
 
 backend.o: backend.c $(HEADERS)
 	gcc $(CS_FLAGS) -c backend.c -o backend.o $(INC)

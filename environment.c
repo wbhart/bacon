@@ -38,11 +38,11 @@ void intrinsics_init(void)
    int i;
 
    type_t ** args = GC_MALLOC(2*sizeof(type_t *));
-   type_t ** fns = GC_MALLOC(12*sizeof(type_t *));
+   type_t ** fns = GC_MALLOC(3*sizeof(type_t *));
    
-   type_t * type_list[4] = { t_ZZ, t_int, t_uint, t_double };
+   type_t * type_list[3] = { t_int, t_uint, t_double };
 
-   for (i = 0; i < 4; i++)
+   for (i = 0; i < 3; i++)
    {
       args[1] = args[0] = type_list[i];
       
@@ -50,13 +50,15 @@ void intrinsics_init(void)
       fns[i]->intrinsic = 1;
    }
 
-   bind_generic(sym_lookup("+"), generic_type(4, fns));
-   bind_generic(sym_lookup("-"), generic_type(4, fns));
-   bind_generic(sym_lookup("*"), generic_type(4, fns));
-   bind_generic(sym_lookup("/"), generic_type(4, fns));
-   bind_generic(sym_lookup("%"), generic_type(4, fns));
+   args[1] = args[0] = type_list[3];
+      
+   bind_generic(sym_lookup("+"), generic_type(3, fns)); 
+   bind_generic(sym_lookup("-"), generic_type(3, fns));
+   bind_generic(sym_lookup("*"), generic_type(3, fns));
+   bind_generic(sym_lookup("/"), generic_type(3, fns));
+   bind_generic(sym_lookup("%"), generic_type(3, fns));
 
-   for (i = 0; i < 4; i++)
+   for (i = 0; i < 3; i++)
    {
       args[1] = args[0] = type_list[i];
       
@@ -64,15 +66,25 @@ void intrinsics_init(void)
       fns[i]->intrinsic = 1;
    }
 
-   bind_generic(sym_lookup("=="), generic_type(4, fns));
-   bind_generic(sym_lookup("!="), generic_type(4, fns));
-   bind_generic(sym_lookup("<="), generic_type(4, fns));
-   bind_generic(sym_lookup(">="), generic_type(4, fns));
-   bind_generic(sym_lookup("<"), generic_type(4, fns));
-   bind_generic(sym_lookup(">"), generic_type(4, fns));
+   bind_generic(sym_lookup("=="), generic_type(3, fns));
+   bind_generic(sym_lookup("!="), generic_type(3, fns));
+   bind_generic(sym_lookup("<="), generic_type(3, fns));
+   bind_generic(sym_lookup(">="), generic_type(3, fns));
+   bind_generic(sym_lookup("<"), generic_type(3, fns));
+   bind_generic(sym_lookup(">"), generic_type(3, fns));
 
+   for (i = 0; i < 3; i++)
+   {
+      args[1] = args[0] = type_list[i];
+      
+      fns[i] = fn_type(t_nil, 2, args);
+      fns[i]->intrinsic = 1;
+   }
+
+   t_assignment = generic_type(3, fns);
+   bind_generic(sym_lookup("="), t_assignment);
+   
    bind_symbol(sym_lookup("nil"), t_nil, NULL);
-   bind_symbol(sym_lookup("ZZ"), t_ZZ, NULL);
    bind_symbol(sym_lookup("int"), t_int, NULL);
    bind_symbol(sym_lookup("uint"), t_uint, NULL);
    bind_symbol(sym_lookup("bool"), t_bool, NULL);
@@ -127,6 +139,20 @@ bind_t * find_symbol(sym_t * sym)
       }
       
       s = s->next;
+   }
+
+   return NULL;
+}
+
+bind_t * find_symbol_in_current_scope(sym_t * sym)
+{
+   bind_t * b = current_scope->scope;
+ 
+   while (b != NULL)
+   {
+      if (b->sym == sym)
+         return b;
+      b = b->next;
    }
 
    return NULL;

@@ -26,13 +26,25 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "gc.h"
 
 #ifndef SERIAL_H
 #define SERIAL_H
 
+#ifdef __cplusplus
+ extern "C" {
+#endif
+
 char * serial(void);
+
+char * serialise(const char * name);
+
+
+#ifdef __cplusplus
+ }
+#endif
 
 #endif
 
