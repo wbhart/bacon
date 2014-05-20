@@ -1,0 +1,35 @@
+Basic Arithmetic CONsol (BACON)
+===============================
+
+"Because everything is better with Bacon!"
+
+Bacon is an initial attempt at a flint parser.
+
+Currently it uses flint fmpz's for bignums, and will shortly have a foreign function interface.
+
+Bacon is an imperative, statically typed, object oriented language, with an interactive console, jit compilation (via LLVM) and local type inference.
+
+Documentation will be forthcoming.
+
+Currently Bacon is still missing the following important features, though the infrastructure already exists in the implementation for most of these:
+
+* Foreign function interface
+* Parameterised types
+* Generic functions
+* Ability to load files
+* A module system
+* User defined constructors/destructors/operators
+* For loops
+* Array reallocation
+* Bounds checking
+* Ability to generate libraries/binaries
+* Combined bignum/word operators/relations
+* Print function
+* Logical operators
+* Combined assignment/arithmetic operators
+* Binary operations/relations on arrays/tuples
+* Assigning to places returned from a function
+
+William Hart.
+
+20 May 2014
